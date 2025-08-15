@@ -186,6 +186,13 @@ async def windose_end_day(interaction: discord.Interaction):
       
       await interaction.response.send_message(embed=embed, file=file)
       logger.info(f'Sent daily task summary to {interaction.user} with image: {random_image}')
+      
+      # Reset all response files after sending summary
+      for filename in ['did_it.txt', 'tried.txt', 'did_not_do.txt']:
+        filepath = f'responses/{filename}'
+        with open(filepath, 'w') as f:
+          f.write('')  # Clear the file
+      logger.info('Reset all response files for new day')
     
   except Exception as e:
     await interaction.response.send_message("An error occurred while getting the summary!", ephemeral=True)
