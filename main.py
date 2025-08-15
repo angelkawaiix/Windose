@@ -67,9 +67,8 @@ class TaskResponseView(discord.ui.View):
     # Add a custom_id to make it persistent
     self.custom_id = "task_response_view"
 
-  @discord.ui.button(label="I did it! ✅", style=discord.ButtonStyle.success)
-  async def did_it(self, interaction: discord.Interaction,
-                   button: discord.ui.Button):
+  @discord.ui.button(label="I did it! ✅", style=discord.ButtonStyle.success, custom_id="task_did_it")
+  async def did_it(self, interaction: discord.Interaction, button: discord.ui.Button):
     ensure_response_files()
     remove_user_from_all_files(interaction.user.id)
     add_user_to_file(interaction.user.id, 'did_it.txt')
@@ -77,9 +76,8 @@ class TaskResponseView(discord.ui.View):
         "Great job! You completed your task! 🎉", ephemeral=True)
     logger.info(f'{interaction.user} marked task as completed')
 
-  @discord.ui.button(label="I tried 💪", style=discord.ButtonStyle.secondary)
-  async def tried(self, interaction: discord.Interaction,
-                  button: discord.ui.Button):
+  @discord.ui.button(label="I tried 💪", style=discord.ButtonStyle.secondary, custom_id="task_tried")
+  async def tried(self, interaction: discord.Interaction, button: discord.ui.Button):
     ensure_response_files()
     remove_user_from_all_files(interaction.user.id)
     add_user_to_file(interaction.user.id, 'tried.txt')
@@ -88,7 +86,7 @@ class TaskResponseView(discord.ui.View):
     logger.info(f'{interaction.user} marked task as attempted')
 
   @discord.ui.button(label="I did not do it 😔",
-                     style=discord.ButtonStyle.danger)
+                     style=discord.ButtonStyle.danger, custom_id="task_did_not_do")
   async def did_not_do(self, interaction: discord.Interaction,
                        button: discord.ui.Button):
     ensure_response_files()
