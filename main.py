@@ -71,7 +71,7 @@ async def windose_daily_event(interaction: discord.Interaction):
     random_task = random.choice(tasks)
     
     embed = discord.Embed(
-      title="🌟 Your Daily Task",
+      title="⊹₊ ⋆ ʚ┊ Daily task ┊ ɞ ⊹₊ ⋆",
       description=random_task,
       color=0xFF69B4
     )
