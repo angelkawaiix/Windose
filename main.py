@@ -2,6 +2,9 @@ import asyncio
 import logging
 import logging.handlers
 import os
+import random
+import discord
+from discord.ext import commands
 
 # Configure logging
 logging.basicConfig(
@@ -16,33 +19,73 @@ logger = logging.getLogger('bot')
 # Bot configuration
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
 intents = discord.Intents.default()
-client = discord.Client(intents=intents)
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 # Bot events
-@client.event
+@bot.event
 async def on_ready():
-  await client.change_presence(activity=discord.Game(
+  await bot.change_presence(activity=discord.Game(
       name="Needy Streamer Overload"))
-  print(f'Logged in as {client.user.name} - {client.user.id}')
+  print(f'Logged in as {bot.user.name} - {bot.user.id}')
+  
+  # Sync slash commands
+  try:
+    synced = await bot.tree.sync()
+    logger.info(f'Synced {len(synced)} command(s)')
+  except Exception as e:
+    logger.error(f'Failed to sync commands: {e}')
 
 
-@client.event
+@bot.event
 async def on_error(event, *args, **kwargs):
   """Triggered when an error occurs in any bot event"""
   logger.error(f'An error occurred in event {event}', exc_info=True)
 
 
-@client.event
+@bot.event
 async def on_disconnect():
   """Triggered when the bot loses connection to Discord"""
   logger.warning('Bot disconnected from Discord')
 
 
-@client.event
+@bot.event
 async def on_resumed():
   """Triggered when the bot reconnects to Discord after a disconnection"""
   logger.info('Bot resumed connection to Discord')
+
+
+# Slash commands
+@bot.tree.command(name="windose_daily_event", description="Get a random daily task to complete")
+async def windose_daily_event(interaction: discord.Interaction):
+  """Select a random task from tasks.txt and send it as a message"""
+  try:
+    with open('tasks/tasks.txt', 'r', encoding='utf-8') as file:
+      tasks = [line.strip() for line in file.readlines() if line.strip()]
+    
+    if not tasks:
+      await interaction.response.send_message("No tasks found in the file!", ephemeral=True)
+      return
+    
+    random_task = random.choice(tasks)
+    
+    embed = discord.Embed(
+      title="🌟 Your Daily Task",
+      description=random_task,
+      color=0xFF69B4
+    )
+    embed.set_footer(text="Have a productive day! 💕")
+    
+    await interaction.response.send_message(embed=embed)
+    logger.info(f'Sent daily task to {interaction.user}: {random_task}')
+    
+  except FileNotFoundError:
+    await interaction.response.send_message("Tasks file not found!", ephemeral=True)
+    logger.error('tasks/tasks.txt file not found')
+  except Exception as e:
+    await interaction.response.send_message("An error occurred while getting your task!", ephemeral=True)
+    logger.error(f'Error in windose_daily_event command: {e}', exc_info=True)
 
 
 # Auto-ping function
@@ -51,11 +94,11 @@ async def auto_ping():
   while True:
     try:
       await asyncio.sleep(300)  # Wait 5 minutes
-      if client.is_ready():
+      if bot.is_ready():
         logger.info(
-            f'🏓 Auto-ping: Bot is alive! Connected to {len(client.guilds)} guilds'
+            f'🏓 Auto-ping: Bot is alive! Connected to {len(bot.guilds)} guilds'
         )
-        logger.info(f'Auto-ping: Latency: {round(client.latency * 1000)}ms')
+        logger.info(f'Auto-ping: Latency: {round(bot.latency * 1000)}ms')
       else:
         logger.warning('Auto-ping: Bot is not ready, skipping ping')
     except Exception as e:
@@ -65,4 +108,4 @@ async def auto_ping():
 # Start the bot
 if __name__ == "__main__":
   logger.info('Starting bot...')
-  client.run(TOKEN)
+  bot.run(TOKEN)
