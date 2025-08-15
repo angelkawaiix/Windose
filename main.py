@@ -56,6 +56,8 @@ def add_user_to_file(user_id, filename):
 class TaskResponseView(discord.ui.View):
   def __init__(self):
     super().__init__(timeout=None)
+    # Add a custom_id to make it persistent
+    self.custom_id = "task_response_view"
     
   @discord.ui.button(label="I did it! ✅", style=discord.ButtonStyle.success)
   async def did_it(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -220,6 +222,10 @@ async def on_ready():
   await bot.change_presence(activity=discord.Game(
       name="Needy Streamer Overload"))
   print(f'Logged in as {bot.user.name} - {bot.user.id}')
+  
+  # Register persistent views for buttons to work after bot restart
+  bot.add_view(TaskResponseView())
+  logger.info('Registered persistent TaskResponseView')
   
   # Start scheduled tasks
   if not daily_task_auto.is_running():
