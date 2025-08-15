@@ -23,6 +23,62 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
+
+# Helper functions for tracking user responses
+def ensure_response_files():
+  """Ensure response tracking files exist"""
+  os.makedirs('responses', exist_ok=True)
+  for filename in ['did_it.txt', 'tried.txt', 'did_not_do.txt']:
+    filepath = f'responses/{filename}'
+    if not os.path.exists(filepath):
+      open(filepath, 'w').close()
+
+def remove_user_from_all_files(user_id):
+  """Remove user from all response files"""
+  files = ['responses/did_it.txt', 'responses/tried.txt', 'responses/did_not_do.txt']
+  for filepath in files:
+    if os.path.exists(filepath):
+      with open(filepath, 'r') as f:
+        lines = [line.strip() for line in f.readlines() if line.strip() != str(user_id)]
+      with open(filepath, 'w') as f:
+        f.write('\n'.join(lines) + ('\n' if lines else ''))
+
+def add_user_to_file(user_id, filename):
+  """Add user to specific response file"""
+  filepath = f'responses/{filename}'
+  with open(filepath, 'a') as f:
+    f.write(f'{user_id}\n')
+
+class TaskResponseView(discord.ui.View):
+  def __init__(self):
+    super().__init__(timeout=None)
+    
+  @discord.ui.button(label="I did it! ✅", style=discord.ButtonStyle.success)
+  async def did_it(self, interaction: discord.Interaction, button: discord.ui.Button):
+    ensure_response_files()
+    remove_user_from_all_files(interaction.user.id)
+    add_user_to_file(interaction.user.id, 'did_it.txt')
+    await interaction.response.send_message("Great job! You completed your task! 🎉", ephemeral=True)
+    logger.info(f'{interaction.user} marked task as completed')
+    
+  @discord.ui.button(label="I tried 💪", style=discord.ButtonStyle.secondary)
+  async def tried(self, interaction: discord.Interaction, button: discord.ui.Button):
+    ensure_response_files()
+    remove_user_from_all_files(interaction.user.id)
+    add_user_to_file(interaction.user.id, 'tried.txt')
+    await interaction.response.send_message("Good effort! Trying is what matters! 💪", ephemeral=True)
+    logger.info(f'{interaction.user} marked task as attempted')
+    
+  @discord.ui.button(label="I did not do it 😔", style=discord.ButtonStyle.danger)
+  async def did_not_do(self, interaction: discord.Interaction, button: discord.ui.Button):
+    ensure_response_files()
+    remove_user_from_all_files(interaction.user.id)
+    add_user_to_file(interaction.user.id, 'did_not_do.txt')
+    await interaction.response.send_message("That's okay! Tomorrow is a new day! 🌅", ephemeral=True)
+    logger.info(f'{interaction.user} marked task as not completed')
+
+
+
 # Bot events
 @bot.event
 async def on_ready():
@@ -88,12 +144,15 @@ async def windose_daily_event(interaction: discord.Interaction):
     )
     embed.set_footer(text="Have a productive day! 💕")
     
+    # Create buttons
+    view = TaskResponseView()
+    
     # Attach the image file
     with open(image_path, 'rb') as image_file:
       file = discord.File(image_file, filename=random_image)
       embed.set_image(url=f"attachment://{random_image}")
       
-      await interaction.response.send_message(embed=embed, file=file)
+      await interaction.response.send_message(embed=embed, file=file, view=view)
       logger.info(f'Sent daily task to {interaction.user}: {random_task} with image: {random_image}')
     
   except FileNotFoundError as e:
