@@ -61,6 +61,7 @@ async def on_resumed():
 async def windose_daily_event(interaction: discord.Interaction):
   """Select a random task from tasks.txt and send it as a message"""
   try:
+    # Get random task
     with open('tasks/tasks.txt', 'r', encoding='utf-8') as file:
       tasks = [line.strip() for line in file.readlines() if line.strip()]
     
@@ -70,6 +71,16 @@ async def windose_daily_event(interaction: discord.Interaction):
     
     random_task = random.choice(tasks)
     
+    # Get random image
+    image_files = [f for f in os.listdir('images') if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    
+    if not image_files:
+      await interaction.response.send_message("No images found in the images folder!", ephemeral=True)
+      return
+    
+    random_image = random.choice(image_files)
+    image_path = f'images/{random_image}'
+    
     embed = discord.Embed(
       title="⊹₊ ⋆ ʚ┊ Daily task ┊ ɞ ⊹₊ ⋆",
       description=random_task,
@@ -77,12 +88,17 @@ async def windose_daily_event(interaction: discord.Interaction):
     )
     embed.set_footer(text="Have a productive day! 💕")
     
-    await interaction.response.send_message(embed=embed)
-    logger.info(f'Sent daily task to {interaction.user}: {random_task}')
+    # Attach the image file
+    with open(image_path, 'rb') as image_file:
+      file = discord.File(image_file, filename=random_image)
+      embed.set_image(url=f"attachment://{random_image}")
+      
+      await interaction.response.send_message(embed=embed, file=file)
+      logger.info(f'Sent daily task to {interaction.user}: {random_task} with image: {random_image}')
     
-  except FileNotFoundError:
-    await interaction.response.send_message("Tasks file not found!", ephemeral=True)
-    logger.error('tasks/tasks.txt file not found')
+  except FileNotFoundError as e:
+    await interaction.response.send_message("Required files not found!", ephemeral=True)
+    logger.error(f'File not found: {e}')
   except Exception as e:
     await interaction.response.send_message("An error occurred while getting your task!", ephemeral=True)
     logger.error(f'Error in windose_daily_event command: {e}', exc_info=True)
