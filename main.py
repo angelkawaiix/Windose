@@ -18,10 +18,37 @@ discord_logger = logging.getLogger('discord')
 discord_logger.setLevel(logging.INFO)
 logger = logging.getLogger('bot')
 
+
+class DiscordLogHandler(logging.Handler):
+  """Custom logging handler that sends logs to Discord channel"""
+  
+  def __init__(self, bot, channel_id):
+    super().__init__()
+    self.bot = bot
+    self.channel_id = channel_id
+    self.setLevel(logging.INFO)
+    
+  def emit(self, record):
+    """Send log record to Discord channel"""
+    try:
+      if self.bot.is_ready():
+        channel = self.bot.get_channel(self.channel_id)
+        if channel:
+          log_message = self.format(record)
+          # Truncate message if too long for Discord
+          if len(log_message) > 1900:
+            log_message = log_message[:1900] + "..."
+          
+          # Create task to send message asynchronously
+          asyncio.create_task(channel.send(f"```\n{log_message}\n```"))
+    except Exception:
+      pass  # Don't log errors from the logging handler itself
+
 # Bot configuration
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
 DAILY_CHANNEL_ID = 1405719734917267477
 PING_ROLE_ID = 1405589111565193287
+LOG_CHANNEL_ID = 1405940016773075146
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -265,6 +292,15 @@ async def on_ready():
   # Start auto-ping task
   asyncio.create_task(auto_ping())
   logger.info('Started auto-ping task')
+
+  # Set up Discord logging handler
+  discord_handler = DiscordLogHandler(bot, LOG_CHANNEL_ID)
+  discord_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+  
+  # Add handler to root logger to catch all logs
+  root_logger = logging.getLogger()
+  root_logger.addHandler(discord_handler)
+  logger.info('Started Discord logging to channel')
 
   # Sync slash commands
   try:
