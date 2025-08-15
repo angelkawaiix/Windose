@@ -113,6 +113,85 @@ async def on_resumed():
 
 
 # Slash commands
+@bot.tree.command(name="windose_end_day", description="View daily task completion summary")
+async def windose_end_day(interaction: discord.Interaction):
+  """Display summary of daily task completions"""
+  try:
+    ensure_response_files()
+    
+    # Get random image
+    image_files = [f for f in os.listdir('images') if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    
+    if not image_files:
+      await interaction.response.send_message("No images found in the images folder!", ephemeral=True)
+      return
+    
+    random_image = random.choice(image_files)
+    image_path = f'images/{random_image}'
+    
+    # Read user responses from files
+    def read_user_ids(filename):
+      filepath = f'responses/{filename}'
+      if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+          return [line.strip() for line in f.readlines() if line.strip()]
+      return []
+    
+    completed_users = read_user_ids('did_it.txt')
+    attempted_users = read_user_ids('tried.txt')
+    not_completed_users = read_user_ids('did_not_do.txt')
+    
+    # Get all guild members (excluding bots)
+    guild_members = [member for member in interaction.guild.members if not member.bot]
+    all_participated = set(completed_users + attempted_users + not_completed_users)
+    not_participated = [str(member.id) for member in guild_members if str(member.id) not in all_participated]
+    
+    # Build summary text
+    summary_text = "**Users who completed the task:**\n"
+    if completed_users:
+      for user_id in completed_users:
+        try:
+          user = await bot.fetch_user(int(user_id))
+          summary_text += f"• {user.display_name}\n"
+        except:
+          summary_text += f"• Unknown User ({user_id})\n"
+    else:
+      summary_text += "• None\n"
+    
+    summary_text += f"\n**Users who attempted:** {len(attempted_users)}\n"
+    summary_text += f"**Users who didn't complete it:** {len(not_completed_users)}\n"
+    
+    summary_text += "\n**Users who didn't participate:**\n"
+    if not_participated:
+      for user_id in not_participated:
+        try:
+          user = await bot.fetch_user(int(user_id))
+          summary_text += f"• {user.display_name}\n"
+        except:
+          summary_text += f"• Unknown User ({user_id})\n"
+    else:
+      summary_text += "• None\n"
+    
+    embed = discord.Embed(
+      title="⊹₊ ⋆ ʚ┊ Daily task summary ┊ ɞ ⊹₊ ⋆",
+      description=summary_text,
+      color=0xFF69B4
+    )
+    embed.set_footer(text="Great work today everyone! 💕")
+    
+    # Attach the image file
+    with open(image_path, 'rb') as image_file:
+      file = discord.File(image_file, filename=random_image)
+      embed.set_image(url=f"attachment://{random_image}")
+      
+      await interaction.response.send_message(embed=embed, file=file)
+      logger.info(f'Sent daily task summary to {interaction.user} with image: {random_image}')
+    
+  except Exception as e:
+    await interaction.response.send_message("An error occurred while getting the summary!", ephemeral=True)
+    logger.error(f'Error in windose_end_day command: {e}', exc_info=True)
+
+
 @bot.tree.command(name="windose_daily_event", description="Get a random daily task to complete")
 async def windose_daily_event(interaction: discord.Interaction):
   """Select a random task from tasks.txt and send it as a message"""
