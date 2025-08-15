@@ -372,7 +372,7 @@ async def windose_daily_event(interaction: discord.Interaction):
       file = discord.File(image_file, filename=random_image)
       embed.set_image(url=f"attachment://{random_image}")
       
-      await interaction.response.send_message(embed=embed, file=file, view=view)
+      await interaction.response.send_message(f"<@&{PING_ROLE_ID}>", embed=embed, file=file, view=view)
       logger.info(f'Sent daily task to {interaction.user}: {random_task} with image: {random_image}')
     
   except FileNotFoundError as e:
