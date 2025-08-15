@@ -146,7 +146,8 @@ async def daily_task_auto():
       await channel.send(f"<@&{PING_ROLE_ID}>",
                          embed=embed,
                          file=file,
-                         view=view)
+                         view=view,
+                         allowed_mentions=discord.AllowedMentions(roles=True))
       logger.info(
           f'Auto-sent daily task: {random_task} with image: {random_image}')
 
@@ -226,7 +227,8 @@ async def daily_summary_auto():
       file = discord.File(image_file, filename=random_image)
       embed.set_image(url=f"attachment://{random_image}")
 
-      await channel.send(f"<@&{PING_ROLE_ID}>", embed=embed, file=file)
+      await channel.send(f"<@&{PING_ROLE_ID}>", embed=embed, file=file,
+                         allowed_mentions=discord.AllowedMentions(roles=True))
       logger.info(f'Auto-sent daily task summary with image: {random_image}')
 
       # Reset all response files after sending summary
@@ -421,7 +423,8 @@ async def windose_daily_event(interaction: discord.Interaction):
       await interaction.response.send_message(f"<@&{PING_ROLE_ID}>",
                                               embed=embed,
                                               file=file,
-                                              view=view)
+                                              view=view,
+                                              allowed_mentions=discord.AllowedMentions(roles=True))
       logger.info(
           f'Sent daily task to {interaction.user}: {random_task} with image: {random_image}'
       )
