@@ -262,6 +262,10 @@ async def on_ready():
     daily_summary_auto.start()
     logger.info('Started daily summary automation (7 AM EST)')
 
+  # Start auto-ping task
+  asyncio.create_task(auto_ping())
+  logger.info('Started auto-ping task')
+
   # Sync slash commands
   try:
     synced = await bot.tree.sync()
