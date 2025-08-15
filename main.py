@@ -19,31 +19,6 @@ discord_logger.setLevel(logging.INFO)
 logger = logging.getLogger('bot')
 
 
-class DiscordLogHandler(logging.Handler):
-  """Custom logging handler that sends logs to Discord channel"""
-  
-  def __init__(self, bot, channel_id):
-    super().__init__()
-    self.bot = bot
-    self.channel_id = channel_id
-    self.setLevel(logging.INFO)
-    
-  def emit(self, record):
-    """Send log record to Discord channel"""
-    try:
-      if self.bot.is_ready():
-        channel = self.bot.get_channel(self.channel_id)
-        if channel:
-          log_message = self.format(record)
-          # Truncate message if too long for Discord
-          if len(log_message) > 1900:
-            log_message = log_message[:1900] + "..."
-          
-          # Create task to send message asynchronously
-          asyncio.create_task(channel.send(f"```\n{log_message}\n```"))
-    except Exception:
-      pass  # Don't log errors from the logging handler itself
-
 # Bot configuration
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
 DAILY_CHANNEL_ID = 1405719734917267477
@@ -94,8 +69,11 @@ class TaskResponseView(discord.ui.View):
     # Add a custom_id to make it persistent
     self.custom_id = "task_response_view"
 
-  @discord.ui.button(label="I did it! ✅", style=discord.ButtonStyle.success, custom_id="task_did_it")
-  async def did_it(self, interaction: discord.Interaction, button: discord.ui.Button):
+  @discord.ui.button(label="I did it! ✅",
+                     style=discord.ButtonStyle.success,
+                     custom_id="task_did_it")
+  async def did_it(self, interaction: discord.Interaction,
+                   button: discord.ui.Button):
     ensure_response_files()
     remove_user_from_all_files(interaction.user.id)
     add_user_to_file(interaction.user.id, 'did_it.txt')
@@ -103,8 +81,11 @@ class TaskResponseView(discord.ui.View):
         "Great job! You completed your task! 🎉", ephemeral=True)
     logger.info(f'{interaction.user} marked task as completed')
 
-  @discord.ui.button(label="I tried 💪", style=discord.ButtonStyle.secondary, custom_id="task_tried")
-  async def tried(self, interaction: discord.Interaction, button: discord.ui.Button):
+  @discord.ui.button(label="I tried 💪",
+                     style=discord.ButtonStyle.secondary,
+                     custom_id="task_tried")
+  async def tried(self, interaction: discord.Interaction,
+                  button: discord.ui.Button):
     ensure_response_files()
     remove_user_from_all_files(interaction.user.id)
     add_user_to_file(interaction.user.id, 'tried.txt')
@@ -113,7 +94,8 @@ class TaskResponseView(discord.ui.View):
     logger.info(f'{interaction.user} marked task as attempted')
 
   @discord.ui.button(label="I did not do it 😔",
-                     style=discord.ButtonStyle.danger, custom_id="task_did_not_do")
+                     style=discord.ButtonStyle.danger,
+                     custom_id="task_did_not_do")
   async def did_not_do(self, interaction: discord.Interaction,
                        button: discord.ui.Button):
     ensure_response_files()
@@ -254,7 +236,9 @@ async def daily_summary_auto():
       file = discord.File(image_file, filename=random_image)
       embed.set_image(url=f"attachment://{random_image}")
 
-      await channel.send(f"<@&{PING_ROLE_ID}>", embed=embed, file=file,
+      await channel.send(f"<@&{PING_ROLE_ID}>",
+                         embed=embed,
+                         file=file,
                          allowed_mentions=discord.AllowedMentions(roles=True))
       logger.info(f'Auto-sent daily task summary with image: {random_image}')
 
@@ -292,15 +276,6 @@ async def on_ready():
   # Start auto-ping task
   asyncio.create_task(auto_ping())
   logger.info('Started auto-ping task')
-
-  # Set up Discord logging handler
-  discord_handler = DiscordLogHandler(bot, LOG_CHANNEL_ID)
-  discord_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-  
-  # Add handler to root logger to catch all logs
-  root_logger = logging.getLogger()
-  root_logger.addHandler(discord_handler)
-  logger.info('Started Discord logging to channel')
 
   # Sync slash commands
   try:
@@ -460,11 +435,12 @@ async def windose_daily_event(interaction: discord.Interaction):
       file = discord.File(image_file, filename=random_image)
       embed.set_image(url=f"attachment://{random_image}")
 
-      await interaction.response.send_message(f"<@&{PING_ROLE_ID}>",
-                                              embed=embed,
-                                              file=file,
-                                              view=view,
-                                              allowed_mentions=discord.AllowedMentions(roles=True))
+      await interaction.response.send_message(
+          f"<@&{PING_ROLE_ID}>",
+          embed=embed,
+          file=file,
+          view=view,
+          allowed_mentions=discord.AllowedMentions(roles=True))
       logger.info(
           f'Sent daily task to {interaction.user}: {random_task} with image: {random_image}'
       )
@@ -489,13 +465,16 @@ async def auto_ping():
         logger.info(
             f'🏓 Auto-ping: Bot is alive! Connected to {len(bot.guilds)} guilds'
         )
-        logger.info(f'Auto-ping: Latency: {round(bot.latency * 1000)}ms')
+
       else:
         logger.warning('Auto-ping: Bot is not ready, skipping ping')
     except Exception as e:
       logger.error(f'Auto-ping error: {e}', exc_info=True)
 
 
+from alive import keep_alive
+
+keep_alive()
 # Start the bot
 if __name__ == "__main__":
   logger.info('Starting bot...')
