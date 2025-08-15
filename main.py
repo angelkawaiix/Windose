@@ -4,7 +4,9 @@ import logging.handlers
 import os
 import random
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
+from datetime import datetime, time
+import pytz
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +20,8 @@ logger = logging.getLogger('bot')
 
 # Bot configuration
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
+DAILY_CHANNEL_ID = 1405719734917267477
+PING_ROLE_ID = 1405589111565193287
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -79,12 +83,152 @@ class TaskResponseView(discord.ui.View):
 
 
 
+# Automated daily functions
+@tasks.loop(time=time(hour=12, minute=0))  # 8 AM EST = 12 PM UTC
+async def daily_task_auto():
+  """Automatically send daily task at 8 AM EST"""
+  try:
+    channel = bot.get_channel(DAILY_CHANNEL_ID)
+    if not channel:
+      logger.error(f'Channel {DAILY_CHANNEL_ID} not found')
+      return
+    
+    # Get random task
+    with open('tasks/tasks.txt', 'r', encoding='utf-8') as file:
+      tasks_list = [line.strip() for line in file.readlines() if line.strip()]
+    
+    if not tasks_list:
+      logger.error('No tasks found in tasks.txt')
+      return
+    
+    random_task = random.choice(tasks_list)
+    
+    # Get random image
+    image_files = [f for f in os.listdir('images') if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    
+    if not image_files:
+      logger.error('No images found in images folder')
+      return
+    
+    random_image = random.choice(image_files)
+    image_path = f'images/{random_image}'
+    
+    embed = discord.Embed(
+      title="⊹₊ ⋆ ʚ┊ Daily task ┊ ɞ ⊹₊ ⋆",
+      description=random_task,
+      color=0xFF69B4
+    )
+    embed.set_footer(text="Have a productive day! 💕")
+    
+    # Create buttons
+    view = TaskResponseView()
+    
+    # Attach the image file and send with role ping
+    with open(image_path, 'rb') as image_file:
+      file = discord.File(image_file, filename=random_image)
+      embed.set_image(url=f"attachment://{random_image}")
+      
+      await channel.send(f"<@&{PING_ROLE_ID}>", embed=embed, file=file, view=view)
+      logger.info(f'Auto-sent daily task: {random_task} with image: {random_image}')
+    
+  except Exception as e:
+    logger.error(f'Error in daily_task_auto: {e}', exc_info=True)
+
+@tasks.loop(time=time(hour=11, minute=0))  # 7 AM EST = 11 AM UTC
+async def daily_summary_auto():
+  """Automatically send daily summary at 7 AM EST"""
+  try:
+    channel = bot.get_channel(DAILY_CHANNEL_ID)
+    if not channel:
+      logger.error(f'Channel {DAILY_CHANNEL_ID} not found')
+      return
+    
+    ensure_response_files()
+    
+    # Get random image
+    image_files = [f for f in os.listdir('images') if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    
+    if not image_files:
+      logger.error('No images found in images folder')
+      return
+    
+    random_image = random.choice(image_files)
+    image_path = f'images/{random_image}'
+    
+    # Read user responses from files
+    def read_user_ids(filename):
+      filepath = f'responses/{filename}'
+      if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+          return [line.strip() for line in f.readlines() if line.strip()]
+      return []
+    
+    completed_users = read_user_ids('did_it.txt')
+    attempted_users = read_user_ids('tried.txt')
+    not_completed_users = read_user_ids('did_not_do.txt')
+    
+    # Get all guild members (excluding bots)
+    guild = channel.guild
+    guild_members = [member for member in guild.members if not member.bot]
+    all_participated = set(completed_users + attempted_users + not_completed_users)
+    not_participated = [str(member.id) for member in guild_members if str(member.id) not in all_participated]
+    
+    # Build summary text
+    summary_text = "**Users who completed the task:**\n"
+    if completed_users:
+      for user_id in completed_users:
+        try:
+          user = await bot.fetch_user(int(user_id))
+          summary_text += f"• {user.display_name}\n"
+        except:
+          summary_text += f"• Unknown User ({user_id})\n"
+    else:
+      summary_text += "• None\n"
+    
+    summary_text += f"\n**Users who attempted:** {len(attempted_users)}\n"
+    summary_text += f"**Users who didn't complete it:** {len(not_completed_users)}\n"
+    summary_text += f"**Users who didn't participate:** {len(not_participated)}"
+    
+    embed = discord.Embed(
+      title="⊹₊ ⋆ ʚ┊ Daily task summary ┊ ɞ ⊹₊ ⋆",
+      description=summary_text,
+      color=0xFF69B4
+    )
+    embed.set_footer(text="Great work today everyone! 💕")
+    
+    # Attach the image file and send with role ping
+    with open(image_path, 'rb') as image_file:
+      file = discord.File(image_file, filename=random_image)
+      embed.set_image(url=f"attachment://{random_image}")
+      
+      await channel.send(f"<@&{PING_ROLE_ID}>", embed=embed, file=file)
+      logger.info(f'Auto-sent daily task summary with image: {random_image}')
+      
+      # Reset all response files after sending summary
+      for filename in ['did_it.txt', 'tried.txt', 'did_not_do.txt']:
+        filepath = f'responses/{filename}'
+        with open(filepath, 'w') as f:
+          f.write('')  # Clear the file
+      logger.info('Reset all response files for new day')
+    
+  except Exception as e:
+    logger.error(f'Error in daily_summary_auto: {e}', exc_info=True)
+
 # Bot events
 @bot.event
 async def on_ready():
   await bot.change_presence(activity=discord.Game(
       name="Needy Streamer Overload"))
   print(f'Logged in as {bot.user.name} - {bot.user.id}')
+  
+  # Start scheduled tasks
+  if not daily_task_auto.is_running():
+    daily_task_auto.start()
+    logger.info('Started daily task automation (8 AM EST)')
+  
+  if not daily_summary_auto.is_running():
+    daily_summary_auto.start()
+    logger.info('Started daily summary automation (7 AM EST)')
   
   # Sync slash commands
   try:
