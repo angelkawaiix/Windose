@@ -473,9 +473,29 @@ async def auto_ping():
 
 
 from alive import keep_alive
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    logger.info('Received shutdown signal, cleaning up...')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 keep_alive()
-# Start the bot
+
+# Start the bot with reconnection logic
 if __name__ == "__main__":
-  logger.info('Starting bot...')
-  bot.run(TOKEN)
+    logger.info('Starting bot...')
+    
+    while True:
+        try:
+            bot.run(TOKEN, reconnect=True)
+        except discord.LoginFailure:
+            logger.error('Invalid token, exiting...')
+            break
+        except Exception as e:
+            logger.error(f'Bot crashed: {e}', exc_info=True)
+            logger.info('Restarting bot in 10 seconds...')
+            time.sleep(10)
