@@ -160,17 +160,7 @@ async def windose_end_day(interaction: discord.Interaction):
     
     summary_text += f"\n**Users who attempted:** {len(attempted_users)}\n"
     summary_text += f"**Users who didn't complete it:** {len(not_completed_users)}\n"
-    
-    summary_text += "\n**Users who didn't participate:**\n"
-    if not_participated:
-      for user_id in not_participated:
-        try:
-          user = await bot.fetch_user(int(user_id))
-          summary_text += f"• {user.display_name}\n"
-        except:
-          summary_text += f"• Unknown User ({user_id})\n"
-    else:
-      summary_text += "• None\n"
+    summary_text += f"**Users who didn't participate:** {len(not_participated)}"
     
     embed = discord.Embed(
       title="⊹₊ ⋆ ʚ┊ Daily task summary ┊ ɞ ⊹₊ ⋆",
