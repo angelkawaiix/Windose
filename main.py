@@ -472,7 +472,7 @@ async def auto_ping():
       logger.error(f'Auto-ping error: {e}', exc_info=True)
 
 
-# from alive import keep_alive
+from alive import keep_alive
 import signal
 import sys
 
@@ -483,7 +483,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-keep_alive()
+# keep_alive() < turn back on if i really need
 
 # Start the bot with reconnection logic
 if __name__ == "__main__":
