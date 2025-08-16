@@ -8,8 +8,8 @@ from discord.ext import commands, tasks
 from datetime import datetime, time
 import pytz
 import threading
-
-
+import socketserver
+import http.server
 
 # Configure logging
 logging.basicConfig(
