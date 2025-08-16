@@ -472,7 +472,7 @@ async def auto_ping():
       logger.error(f'Auto-ping error: {e}', exc_info=True)
 
 
-from alive import keep_alive
+# from alive import keep_alive
 import signal
 import sys
 
