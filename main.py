@@ -8,6 +8,9 @@ from discord.ext import commands, tasks
 from datetime import datetime, time
 import pytz
 
+
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -252,6 +255,18 @@ async def daily_summary_auto():
   except Exception as e:
     logger.error(f'Error in daily_summary_auto: {e}', exc_info=True)
 
+
+PORT = 8080
+
+def run_http_server():
+    httpd = socketserver.TCPServer(("", PORT), http.server.SimpleHTTPRequestHandler)
+    print("Server running on port", PORT)
+    httpd.serve_forever()
+
+# Create a new thread for the HTTP server
+http_thread = threading.Thread(target=run_http_server)
+http_thread.daemon = True  # So the thread dies when the main thread dies
+http_thread.start()
 
 # Bot events
 @bot.event
